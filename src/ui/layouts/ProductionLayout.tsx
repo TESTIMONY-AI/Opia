@@ -173,6 +173,20 @@ export function ProductionLayout({
     [ws],
   );
 
+  const onDeleteScene = useCallback(
+    async (id: string) => {
+      setMediaError(null);
+      try {
+        await ws.deleteScene(id);
+        bumpMedia();
+      } catch (e) {
+        setMediaError(formatFirebaseError(e));
+        console.error('[OPIA] delete scene', e);
+      }
+    },
+    [ws, bumpMedia],
+  );
+
   const combinedError =
     [mediaError, ws.syncError]
       .filter((m): m is string => Boolean(m && String(m).trim()))
@@ -224,6 +238,7 @@ export function ProductionLayout({
             onSaveScene={() => void onSaveScene()}
             onApplyScene={(id) => void onApplyScene(id)}
             onRenameScene={(id, name) => void onRenameScene(id, name)}
+            onDeleteScene={(id) => void onDeleteScene(id)}
           />
         </div>
 

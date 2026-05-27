@@ -729,6 +729,29 @@
   color: var(--on-surface);
 }
 
+.scene-chip__delete {
+  flex-shrink: 0;
+  width: 32px;
+  padding: 0;
+  font-size: 18px;
+  line-height: 1;
+  color: var(--on-surface-variant);
+  background: var(--surface-container-high);
+  border: none;
+  border-left: 1px solid var(--border-ghost);
+  cursor: pointer;
+}
+
+.scene-chip__delete:hover:not(:disabled) {
+  color: #ff8a80;
+  background: rgba(255, 138, 128, 0.12);
+}
+
+.scene-chip__delete:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
 .scene-chip__input {
   width: 140px;
   padding: 6px 8px;

@@ -1,5 +1,6 @@
 import {
   collection,
+  deleteDoc,
   doc,
   onSnapshot,
   orderBy,
@@ -11,7 +12,7 @@ import {
 import type { MediaScreenId } from '../media/MediaManager';
 import type { SceneMediaMap } from '../scenes/lookScenes';
 import { getDb } from './config';
-import { uploadSceneMedia } from './mediaStorage';
+import { deleteSceneMedia, uploadSceneMedia } from './mediaStorage';
 import { touchEvent } from './eventsRepository';
 import type { StoredMediaMap, StoredScene } from './types';
 
@@ -111,5 +112,14 @@ export async function updateSceneMedia(
     media: storedMedia,
     updatedAt: now,
   });
+  await touchEvent(eventId);
+}
+
+export async function deleteScene(
+  eventId: string,
+  sceneId: string,
+): Promise<void> {
+  await deleteSceneMedia(eventId, sceneId);
+  await deleteDoc(doc(getDb(), 'events', eventId, 'scenes', sceneId));
   await touchEvent(eventId);
 }

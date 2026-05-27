@@ -10,6 +10,7 @@ import {
 import { downloadStoredMedia } from '../systems/firebase/mediaStorage';
 import {
   createScene,
+  deleteScene,
   renameScene,
   subscribeScenes,
   updateSceneMedia,
@@ -373,6 +374,49 @@ export function useEventWorkspace() {
     [activeEventId, configured],
   );
 
+  const onDeleteScene = useCallback(
+    async (sceneId: string) => {
+      if (!activeEventId) return;
+      setSyncError(null);
+      if (activeSceneId === sceneId) {
+        pendingMediaUpdate.current = null;
+        if (mediaUpdateTimer.current) {
+          clearTimeout(mediaUpdateTimer.current);
+          mediaUpdateTimer.current = null;
+        }
+      }
+      setBusy(true);
+      try {
+        if (!configured) {
+          setLocalScenesByEvent((prev) => {
+            const next = new Map(prev);
+            const list = (next.get(activeEventId) ?? []).filter(
+              (s) => s.id !== sceneId,
+            );
+            next.set(activeEventId, list);
+            return next;
+          });
+          touchLocalEvent(activeEventId);
+          setEvents(loadLocalEvents());
+        } else {
+          await deleteScene(activeEventId, sceneId);
+        }
+        cacheRef.current.delete(sceneId);
+        setMediaCache(new Map(cacheRef.current));
+        if (activeSceneId === sceneId) {
+          setActiveSceneId(null);
+        }
+      } catch (e) {
+        const msg = formatFirebaseError(e);
+        setSyncError(msg);
+        throw new Error(msg);
+      } finally {
+        setBusy(false);
+      }
+    },
+    [activeEventId, activeSceneId, configured],
+  );
+
   const loadSceneMedia = useCallback(
     async (sceneId: string): Promise<SceneMediaMap> => {
       if (!configured) {
@@ -474,6 +518,7 @@ export function useEventWorkspace() {
       renameEvent: onRenameEvent,
       saveScene: onSaveScene,
       renameScene: onRenameScene,
+      deleteScene: onDeleteScene,
       loadSceneMedia,
       onSceneMediaChanged,
       mediaStatus,
@@ -496,6 +541,7 @@ export function useEventWorkspace() {
       onRenameEvent,
       onSaveScene,
       onRenameScene,
+      onDeleteScene,
       loadSceneMedia,
       onSceneMediaChanged,
       mediaStatus,

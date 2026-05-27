@@ -1,9 +1,15 @@
-import { getDownloadURL, ref, uploadBytes } from 'firebase/storage';
+import { deleteObject, getBytes, ref, uploadBytes } from 'firebase/storage';
 import type { MediaScreenId } from '../media/MediaManager';
 import type { SceneMediaMap } from '../scenes/lookScenes';
 import { MEDIA_SCREENS } from '../scenes/lookScenes';
 import { getStorageBucket } from './config';
 import type { StoredMediaMap, StoredMediaRef } from './types';
+
+const SCREEN_LABELS: Record<MediaScreenId, string> = {
+  main: 'Main LED',
+  sides: 'Side LEDs',
+  tvs: 'Side TVs',
+};
 
 export function sceneSlotStoragePath(
   eventId: string,
@@ -26,17 +32,49 @@ export async function uploadSceneMedia(
       continue;
     }
     const path = sceneSlotStoragePath(eventId, sceneId, screen);
-    const storageRef = ref(getStorageBucket(), path);
-    await uploadBytes(storageRef, asset.blob, {
-      contentType: asset.blob.type || 'application/octet-stream',
-    });
-    stored[screen] = {
-      storagePath: path,
-      fileName: asset.fileName,
-      contentType: asset.blob.type || 'application/octet-stream',
-    };
+    const label = SCREEN_LABELS[screen];
+    try {
+      const storageRef = ref(getStorageBucket(), path);
+      await uploadBytes(storageRef, asset.blob, {
+        contentType: asset.blob.type || 'application/octet-stream',
+        customMetadata: { fileName: asset.fileName },
+      });
+      stored[screen] = {
+        storagePath: path,
+        fileName: asset.fileName,
+        contentType: asset.blob.type || 'application/octet-stream',
+      };
+    } catch (e) {
+      const detail = e instanceof Error ? e.message : String(e);
+      throw new Error(`Upload failed for ${label} (${asset.fileName}): ${detail}`);
+    }
   }
   return stored;
+}
+
+function isStorageNotFound(err: unknown): boolean {
+  const code =
+    err && typeof err === 'object' && 'code' in err
+      ? String((err as { code: string }).code)
+      : '';
+  return code === 'storage/object-not-found';
+}
+
+export async function deleteSceneMedia(
+  eventId: string,
+  sceneId: string,
+): Promise<void> {
+  for (const screen of MEDIA_SCREENS) {
+    const path = sceneSlotStoragePath(eventId, sceneId, screen);
+    const label = SCREEN_LABELS[screen];
+    try {
+      await deleteObject(ref(getStorageBucket(), path));
+    } catch (e) {
+      if (isStorageNotFound(e)) continue;
+      const detail = e instanceof Error ? e.message : String(e);
+      throw new Error(`Delete failed for ${label}: ${detail}`);
+    }
+  }
 }
 
 export async function downloadStoredMedia(
@@ -49,17 +87,20 @@ export async function downloadStoredMedia(
       media[screen] = null;
       continue;
     }
-    const storageRef = ref(getStorageBucket(), refData.storagePath);
-    const url = await getDownloadURL(storageRef);
-    const res = await fetch(url);
-    if (!res.ok) {
-      throw new Error(`Failed to download ${refData.fileName}`);
+    const label = SCREEN_LABELS[screen];
+    try {
+      const storageRef = ref(getStorageBucket(), refData.storagePath);
+      const bytes = await getBytes(storageRef);
+      media[screen] = {
+        fileName: refData.fileName,
+        blob: new Blob([bytes], {
+          type: refData.contentType || 'application/octet-stream',
+        }),
+      };
+    } catch (e) {
+      const detail = e instanceof Error ? e.message : String(e);
+      throw new Error(`Download failed for ${label}: ${detail}`);
     }
-    const blob = await res.blob();
-    media[screen] = {
-      fileName: refData.fileName,
-      blob,
-    };
   }
   return media;
 }

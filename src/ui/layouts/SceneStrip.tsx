@@ -16,6 +16,7 @@ interface SceneStripProps {
   onSaveScene: () => void;
   onApplyScene: (id: string) => void;
   onRenameScene: (id: string, name: string) => void;
+  onDeleteScene: (id: string) => void;
 }
 
 export function SceneStrip({
@@ -29,6 +30,7 @@ export function SceneStrip({
   onSaveScene,
   onApplyScene,
   onRenameScene,
+  onDeleteScene,
 }: SceneStripProps) {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editValue, setEditValue] = useState('');
@@ -126,6 +128,25 @@ export function SceneStrip({
                     }}
                   >
                     ✎
+                  </button>
+                  <button
+                    type="button"
+                    className="scene-chip__delete"
+                    aria-label={`Delete ${scene.name}`}
+                    title="Delete scene"
+                    disabled={saveBusy}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (
+                        window.confirm(
+                          `Delete scene "${scene.name}"? This cannot be undone.`,
+                        )
+                      ) {
+                        onDeleteScene(scene.id);
+                      }
+                    }}
+                  >
+                    ×
                   </button>
                 </>
               )}

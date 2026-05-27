@@ -36,7 +36,21 @@ export function getDb(): Firestore {
   return db;
 }
 
+/** GCS bucket id used by the Storage SDK (CORS must allow your site origin). */
+export function resolveStorageBucketId(): string {
+  const fromEnv = import.meta.env.VITE_FIREBASE_STORAGE_BUCKET?.trim();
+  if (!fromEnv) return '';
+  if (fromEnv.endsWith('.appspot.com') || fromEnv.endsWith('.firebasestorage.app')) {
+    return fromEnv;
+  }
+  return `${fromEnv}.appspot.com`;
+}
+
 export function getStorageBucket(): FirebaseStorage {
-  if (!storage) storage = getStorage(getFirebaseApp());
+  if (!storage) {
+    const app = getFirebaseApp();
+    const bucket = resolveStorageBucketId();
+    storage = bucket ? getStorage(app, bucket) : getStorage(app);
+  }
   return storage;
 }

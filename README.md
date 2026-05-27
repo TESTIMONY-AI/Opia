@@ -31,14 +31,23 @@ Real-time LED wall + camera previsualization for church production. Built from t
    firebase deploy --only firestore:rules,storage
    ```
 
-4. **Netlify**: connect the repo, set the same `VITE_FIREBASE_*` variables under Site settings → Environment variables. Build command `npm run build`, publish directory `dist` (already set in `netlify.toml`).
+4. **Storage CORS** (required for scene media upload from the browser — fixes **Failed to fetch** on Render/Netlify):
 
-Without env vars, the app runs **locally** (scenes stay in this browser only). With vars, scenes and media sync to the active **event**; other users opening the same event see the same list in real time.
+   ```bash
+   gcloud auth application-default login   # once
+   npm run firebase:cors
+   ```
+
+   Or paste `firebase/storage-cors.json` in [Google Cloud Console → Storage → your bucket → Configuration → CORS](https://console.cloud.google.com/storage/browser?project=opia-c21b8).
+
+5. **Netlify / Render**: set all `VITE_FIREBASE_*` variables in the host dashboard, then **rebuild** (Vite bakes them in at build time). Publish directory: `dist`. Render can use `render.yaml` in this repo.
+
+Without env vars, the deploy shows “Cloud not configured” on the event hub and scenes stay in the browser only. With vars + CORS, scenes and media sync for everyone on the same event.
 
 ## Run
 
 ```bash
-cd led-previs
+cd Opia
 npm install
 npm run dev
 ```
