@@ -8,6 +8,8 @@ export interface SceneTab {
 interface SceneStripProps {
   engineReady: boolean;
   saveDisabled?: boolean;
+  saveBusy?: boolean;
+  stripError?: string | null;
   loadingSceneId?: string | null;
   scenes: SceneTab[];
   activeSceneId: string | null;
@@ -19,6 +21,8 @@ interface SceneStripProps {
 export function SceneStrip({
   engineReady,
   saveDisabled = false,
+  saveBusy = false,
+  stripError = null,
   loadingSceneId = null,
   scenes,
   activeSceneId,
@@ -50,6 +54,11 @@ export function SceneStrip({
 
   return (
     <div className="scene-strip">
+      {stripError && (
+        <p className="scene-strip__hint" role="alert">
+          {stripError}
+        </p>
+      )}
       <button
         type="button"
         className="scene-strip__save"
@@ -57,7 +66,7 @@ export function SceneStrip({
         onClick={onSaveScene}
         title="Save current media on all screens as a new scene"
       >
-        + Save scene
+        {saveBusy ? 'Saving…' : '+ Save scene'}
       </button>
       <div className="scene-strip__scroll">
         {scenes.length === 0 && (

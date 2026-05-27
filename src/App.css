@@ -614,6 +614,7 @@
 /* Bottom scene strip (replaces camera monitor row) */
 .scene-strip {
   display: flex;
+  flex-wrap: wrap;
   align-items: stretch;
   gap: 8px;
   height: 120px;
@@ -621,6 +622,19 @@
   padding: 8px 10px;
   background: var(--surface-container-lowest);
   border-top: 1px solid var(--border-ghost);
+}
+
+.scene-strip__hint {
+  flex: 1 1 100%;
+  margin: 0;
+  padding: 6px 8px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  line-height: 1.4;
+  color: #ff8a80;
+  background: rgba(255, 138, 128, 0.08);
+  border: 1px solid rgba(255, 138, 128, 0.25);
+  border-radius: var(--radius);
 }
 
 .scene-strip__save {

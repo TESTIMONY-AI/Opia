@@ -1,9 +1,13 @@
 rules_version = '2';
 service firebase.storage {
   match /b/{bucket}/o {
-    match /events/{eventId}/scenes/{sceneId}/{screen} {
-      allow read: if true;
-      allow write: if true;
+    // Scene media: events/{eventId}/scenes/{sceneId}/{main|sides|tvs}
+    match /events/{eventId}/scenes/{sceneId}/{fileName} {
+      allow read, write: if true;
+    }
+    // Fallback while setting up (tighten before public launch)
+    match /{allPaths=**} {
+      allow read, write: if true;
     }
   }
 }

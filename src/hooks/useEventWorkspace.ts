@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { getEventIdFromUrl, setEventIdInUrl } from '../navigation/eventUrl';
 import { isFirebaseConfigured } from '../systems/firebase/config';
+import { formatFirebaseError } from '../systems/firebase/formatFirebaseError';
 import {
   createEvent,
   renameEvent,
@@ -333,9 +334,9 @@ export function useEventWorkspace() {
         setActiveSceneId(scene.id);
         return scene.id;
       } catch (e) {
-        const msg = e instanceof Error ? e.message : 'Failed to save scene';
+        const msg = formatFirebaseError(e);
         setSyncError(msg);
-        throw e;
+        throw new Error(msg);
       } finally {
         setBusy(false);
       }

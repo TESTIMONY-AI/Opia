@@ -22,6 +22,7 @@ import { TopBar } from './TopBar';
 import { SceneStrip } from './SceneStrip';
 import { StageViewport } from './StageViewport';
 import type { EventWorkspace } from '../../hooks/useEventWorkspace';
+import { formatFirebaseError } from '../../systems/firebase/formatFirebaseError';
 
 function mediaStatusFromEngine(engine: PrevisEngine): MediaLoadStatus {
   const out: MediaLoadStatus = {};
@@ -131,12 +132,20 @@ export function ProductionLayout({
       setMediaError('No active event.');
       return;
     }
+    const hasUploads = MEDIA_SCREENS.some((id) => media[id] !== null);
+    if (ws.configured && !hasUploads) {
+      setMediaError(
+        'Upload at least one image or video (Main, Sides, or TVs) before saving a scene.',
+      );
+      return;
+    }
     setMediaError(null);
     try {
       await ws.saveScene(media);
       bumpMedia();
-    } catch {
-      /* syncError from workspace */
+    } catch (e) {
+      setMediaError(formatFirebaseError(e));
+      console.error('[OPIA] save scene', e);
     }
   }, [ws, bumpMedia]);
 
@@ -207,6 +216,8 @@ export function ProductionLayout({
           <SceneStrip
             engineReady={engine !== null}
             saveDisabled={!ws.activeEventId || ws.busy}
+            saveBusy={ws.busy}
+            stripError={mediaError}
             scenes={ws.scenes}
             activeSceneId={ws.activeSceneId}
             loadingSceneId={ws.loadingSceneId}
