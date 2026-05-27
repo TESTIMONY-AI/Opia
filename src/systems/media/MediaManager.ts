@@ -56,17 +56,16 @@ export class MediaManager {
   }
 
   async applySceneMedia(media: SceneMediaMap): Promise<void> {
-    for (const id of MEDIA_SCREENS) {
-      const asset = media[id];
-      if (asset) {
-        const file = new File([asset.blob], asset.fileName, {
-          type: asset.blob.type || 'application/octet-stream',
-        });
-        await this.slots[id].loadFile(file);
-      } else {
-        this.slots[id].resetToPlaceholder();
-      }
-    }
+    await Promise.all(
+      MEDIA_SCREENS.map(async (id) => {
+        const asset = media[id];
+        if (asset) {
+          await this.slots[id].loadFromAsset(asset);
+        } else {
+          this.slots[id].resetToPlaceholder();
+        }
+      }),
+    );
   }
 
   update(): void {

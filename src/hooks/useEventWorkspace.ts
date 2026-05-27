@@ -70,6 +70,8 @@ export function useEventWorkspace() {
   const [activeSceneId, setActiveSceneId] = useState<string | null>(null);
   const [syncError, setSyncError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [savingSceneId, setSavingSceneId] = useState<string | null>(null);
+  const [optimisticScenes, setOptimisticScenes] = useState<StoredScene[]>([]);
   const [loadingSceneId, setLoadingSceneId] = useState<string | null>(null);
   const mediaUpdateTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pendingMediaUpdate = useRef<{
@@ -86,8 +88,15 @@ export function useEventWorkspace() {
     [activeEventId, localScenesByEvent],
   );
 
+  const cloudScenes = useMemo(() => {
+    if (!configured) return storedScenes;
+    const ids = new Set(storedScenes.map((s) => s.id));
+    const pending = optimisticScenes.filter((s) => !ids.has(s.id));
+    return [...storedScenes, ...pending].sort((a, b) => a.order - b.order);
+  }, [configured, storedScenes, optimisticScenes]);
+
   const scenes: SceneListItem[] = configured
-    ? storedScenes.map((s) => ({
+    ? cloudScenes.map((s) => ({
         id: s.id,
         name: s.name,
         updatedAt: s.updatedAt,
@@ -145,6 +154,7 @@ export function useEventWorkspace() {
     if (!activeEventId) {
       queueMicrotask(() => {
         setStoredScenes([]);
+        setOptimisticScenes([]);
         setActiveSceneId(null);
         cacheRef.current = new Map();
         setMediaCache(new Map());
@@ -153,6 +163,7 @@ export function useEventWorkspace() {
     }
     /* eslint-disable react-hooks/set-state-in-effect */
     setActiveSceneId(null);
+    setOptimisticScenes([]);
     cacheRef.current = new Map();
     setMediaCache(new Map());
     /* eslint-enable react-hooks/set-state-in-effect */
@@ -168,31 +179,49 @@ export function useEventWorkspace() {
       queueMicrotask(() => setActiveSceneId(null));
       return;
     }
-    if (!activeEventId) return;
+    if (!activeEventId || storedScenes.length === 0) return;
     let cancelled = false;
 
-    void (async () => {
-      for (const scene of storedScenes) {
-        if (cancelled) return;
+    const scenesToWarm = storedScenes
+      .filter((scene) => {
         const cached = cacheRef.current.get(scene.id);
-        if (cached && cached.updatedAt === scene.updatedAt) continue;
+        return !cached || cached.updatedAt !== scene.updatedAt;
+      })
+      .sort((a, b) => b.updatedAt - a.updatedAt)
+      .slice(0, 2);
 
-        try {
-          const media = await downloadStoredMedia(scene.media);
+    void (async () => {
+      await Promise.all(
+        scenesToWarm.map(async (scene) => {
           if (cancelled) return;
-          const entry = { updatedAt: scene.updatedAt, media };
-          cacheRef.current.set(scene.id, entry);
-          setMediaCache(new Map(cacheRef.current));
-        } catch (e) {
-          console.error('[OPIA] scene media preload', scene.id, e);
-        }
-      }
+          try {
+            const media = await downloadStoredMedia(scene.media);
+            if (cancelled) return;
+            cacheRef.current.set(scene.id, {
+              updatedAt: scene.updatedAt,
+              media,
+            });
+            setMediaCache(new Map(cacheRef.current));
+          } catch (e) {
+            console.error('[OPIA] scene media preload', scene.id, e);
+          }
+        }),
+      );
     })();
 
     return () => {
       cancelled = true;
     };
   }, [configured, activeEventId, storedScenes]);
+
+  useEffect(() => {
+    if (!configured || optimisticScenes.length === 0) return;
+    const ids = new Set(storedScenes.map((s) => s.id));
+    const stillPending = optimisticScenes.filter((s) => !ids.has(s.id));
+    if (stillPending.length !== optimisticScenes.length) {
+      setOptimisticScenes(stillPending);
+    }
+  }, [configured, storedScenes, optimisticScenes]);
 
   const flushMediaUpdate = useCallback(async () => {
     if (!configured) return;
@@ -240,6 +269,7 @@ export function useEventWorkspace() {
     cacheRef.current = new Map();
     setMediaCache(new Map());
     setStoredScenes([]);
+    setOptimisticScenes([]);
     setSyncError(null);
   }, [flushPendingMediaSync]);
 
@@ -250,7 +280,7 @@ export function useEventWorkspace() {
       if (mediaUpdateTimer.current) clearTimeout(mediaUpdateTimer.current);
       mediaUpdateTimer.current = setTimeout(() => {
         void flushMediaUpdate();
-      }, 1200);
+      }, 800);
     },
     [configured, flushMediaUpdate],
   );
@@ -305,7 +335,6 @@ export function useEventWorkspace() {
   const onSaveScene = useCallback(
     async (media: SceneMediaMap) => {
       if (!activeEventId) return null;
-      setBusy(true);
       setSyncError(null);
       try {
         if (!configured) {
@@ -321,28 +350,68 @@ export function useEventWorkspace() {
           setActiveSceneId(scene.id);
           return scene.id;
         }
+        const sceneId = crypto.randomUUID();
+        const now = Date.now();
         const order =
-          storedScenes.length > 0
-            ? Math.max(...storedScenes.map((s) => s.order)) + 1
+          cloudScenes.length > 0
+            ? Math.max(...cloudScenes.map((s) => s.order)) + 1
             : 0;
-        const name = `Scene ${storedScenes.length + 1}`;
-        const scene = await createScene(activeEventId, name, media, order);
-        cacheRef.current.set(scene.id, {
-          updatedAt: scene.updatedAt,
-          media,
-        });
+        const name = `Scene ${cloudScenes.length + 1}`;
+
+        cacheRef.current.set(sceneId, { updatedAt: now, media });
         setMediaCache(new Map(cacheRef.current));
-        setActiveSceneId(scene.id);
-        return scene.id;
+        setActiveSceneId(sceneId);
+        setOptimisticScenes((prev) => [
+          ...prev,
+          {
+            id: sceneId,
+            name,
+            order,
+            updatedAt: now,
+            media: { main: null, sides: null, tvs: null },
+          },
+        ]);
+        setSavingSceneId(sceneId);
+
+        void (async () => {
+          try {
+            const scene = await createScene(
+              activeEventId,
+              name,
+              media,
+              order,
+              sceneId,
+            );
+            cacheRef.current.set(sceneId, {
+              updatedAt: scene.updatedAt,
+              media,
+            });
+            setMediaCache(new Map(cacheRef.current));
+          } catch (e) {
+            const msg = formatFirebaseError(e);
+            setSyncError(msg);
+            cacheRef.current.delete(sceneId);
+            setMediaCache(new Map(cacheRef.current));
+            setOptimisticScenes((prev) => prev.filter((s) => s.id !== sceneId));
+            setActiveSceneId((current) =>
+              current === sceneId ? null : current,
+            );
+            console.error('[OPIA] save scene', e);
+          } finally {
+            setSavingSceneId((current) =>
+              current === sceneId ? null : current,
+            );
+          }
+        })();
+
+        return sceneId;
       } catch (e) {
         const msg = formatFirebaseError(e);
         setSyncError(msg);
         throw new Error(msg);
-      } finally {
-        setBusy(false);
       }
     },
-    [activeEventId, configured, localScenes.length, storedScenes],
+    [activeEventId, configured, localScenes.length, cloudScenes],
   );
 
   const onRenameScene = useCallback(
@@ -511,6 +580,7 @@ export function useEventWorkspace() {
       setActiveSceneId,
       syncError,
       busy,
+      savingSceneId,
       loadingSceneId,
       selectEvent,
       exitEventWorkspace,
@@ -534,6 +604,7 @@ export function useEventWorkspace() {
       activeSceneId,
       syncError,
       busy,
+      savingSceneId,
       loadingSceneId,
       selectEvent,
       exitEventWorkspace,

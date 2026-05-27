@@ -2,7 +2,10 @@ import type { MediaScreenId } from '../media/MediaManager';
 
 export interface SceneMediaAsset {
   fileName: string;
-  blob: Blob;
+  /** Local bytes — used for uploads and offline scenes. */
+  blob?: Blob;
+  /** Firebase download URL — videos load progressively without a full download. */
+  sourceUrl?: string;
 }
 
 export type SceneMediaMap = Record<MediaScreenId, SceneMediaAsset | null>;

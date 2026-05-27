@@ -13,9 +13,19 @@ function isImageFile(file: File): boolean {
   return /\.(png|jpe?g|webp|gif|bmp)$/i.test(file.name);
 }
 
-function loadImage(url: string): Promise<HTMLImageElement> {
+function guessTypeFromName(fileName: string): string {
+  const lower = fileName.toLowerCase();
+  if (/\.(mp4|mov|webm|m4v|ogg)$/.test(lower)) return 'video/mp4';
+  if (/\.png$/.test(lower)) return 'image/png';
+  if (/\.jpe?g$/.test(lower)) return 'image/jpeg';
+  if (/\.webp$/.test(lower)) return 'image/webp';
+  return '';
+}
+
+function loadImage(url: string, remote = false): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
     const img = new Image();
+    if (remote) img.crossOrigin = 'anonymous';
     img.onload = () => resolve(img);
     img.onerror = () => reject(new Error('Image failed to load'));
     img.src = url;
@@ -60,7 +70,7 @@ export class MediaSlot {
 
     try {
       if (isVideoFile(file)) {
-        await this.loadVideo(url);
+        await this.loadVideo(url, false);
         return;
       }
       if (isImageFile(file)) {
@@ -72,6 +82,55 @@ export class MediaSlot {
       URL.revokeObjectURL(url);
       this.objectUrl = null;
       this.lastFile = null;
+      throw err;
+    }
+  }
+
+  async loadFromAsset(asset: {
+    fileName: string;
+    blob?: Blob;
+    sourceUrl?: string;
+  }): Promise<void> {
+    this.disposeCurrent();
+    this.fileName = asset.fileName;
+
+    if (asset.blob) {
+      const file = new File([asset.blob], asset.fileName, {
+        type: asset.blob.type || 'application/octet-stream',
+      });
+      await this.loadFile(file);
+      return;
+    }
+
+    if (!asset.sourceUrl) {
+      throw new Error(`No media data for ${asset.fileName}`);
+    }
+
+    this.lastFile = null;
+    const url = asset.sourceUrl;
+    const video = isVideoFile(
+      new File([], asset.fileName, {
+        type: guessTypeFromName(asset.fileName),
+      }),
+    );
+    const image = isImageFile(
+      new File([], asset.fileName, {
+        type: guessTypeFromName(asset.fileName),
+      }),
+    );
+
+    try {
+      if (video) {
+        await this.loadVideo(url, true);
+        return;
+      }
+      if (image) {
+        await this.loadImage(url, true);
+        return;
+      }
+      throw new Error(`Unsupported file type: ${asset.fileName}`);
+    } catch (err) {
+      this.fileName = '';
       throw err;
     }
   }
@@ -102,8 +161,11 @@ export class MediaSlot {
     this._texture.dispose();
   }
 
-  private async loadVideo(url: string): Promise<void> {
+  private async loadVideo(url: string, remote: boolean): Promise<void> {
     const video = document.createElement('video');
+    if (remote) {
+      video.crossOrigin = 'anonymous';
+    }
     video.src = url;
     video.loop = true;
     video.muted = true;
@@ -111,7 +173,7 @@ export class MediaSlot {
     video.preload = 'auto';
 
     await new Promise<void>((resolve, reject) => {
-      video.onloadedmetadata = () => resolve();
+      video.onloadeddata = () => resolve();
       video.onerror = () => reject(new Error('Video failed to load'));
     });
 
@@ -133,8 +195,8 @@ export class MediaSlot {
     prev.dispose();
   }
 
-  private async loadImage(url: string): Promise<void> {
-    const img = await loadImage(url);
+  private async loadImage(url: string, remote = false): Promise<void> {
+    const img = await loadImage(url, remote);
     const tex = new THREE.Texture(img);
     tex.needsUpdate = true;
     prepareMediaTexture(tex);

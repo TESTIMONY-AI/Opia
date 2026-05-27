@@ -151,6 +151,7 @@ export function ProductionLayout({
 
   const onApplyScene = useCallback(
     async (id: string) => {
+      if (id === ws.activeSceneId) return;
       setMediaError(null);
       try {
         const media = await ws.loadSceneMedia(id);
@@ -229,8 +230,8 @@ export function ProductionLayout({
           />
           <SceneStrip
             engineReady={engine !== null}
-            saveDisabled={!ws.activeEventId || ws.busy}
-            saveBusy={ws.busy}
+            saveDisabled={!ws.activeEventId || Boolean(ws.savingSceneId)}
+            saveBusy={Boolean(ws.savingSceneId)}
             stripError={mediaError}
             scenes={ws.scenes}
             activeSceneId={ws.activeSceneId}

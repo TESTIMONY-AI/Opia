@@ -114,7 +114,9 @@ export function SceneStrip({
                     onClick={() => onApplyScene(scene.id)}
                     title="Switch to this scene"
                   >
-                    {scene.name}
+                    {loadingSceneId === scene.id
+                      ? 'Loading…'
+                      : scene.name}
                   </button>
                   <button
                     type="button"

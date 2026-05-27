@@ -73,8 +73,9 @@ export async function createScene(
   name: string,
   media: SceneMediaMap,
   order: number,
+  sceneId: string = crypto.randomUUID(),
 ): Promise<StoredScene> {
-  const id = crypto.randomUUID();
+  const id = sceneId;
   const now = Date.now();
   const storedMedia = await uploadSceneMedia(eventId, id, media);
   const payload = {
