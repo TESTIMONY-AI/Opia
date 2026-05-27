@@ -1,0 +1,6 @@
+{
+  "sony": { "sharpness": 0.7, "exposure": 1, "moireSensitivity": 0.6 },
+  "canon": { "sharpness": 0.5, "exposure": 0.95, "moireSensitivity": 0.5 },
+  "broadcast": { "sharpness": 0.4, "exposure": 1.1, "moireSensitivity": 0.3 },
+  "smartphone": { "sharpness": 0.9, "exposure": 1.2, "moireSensitivity": 0.85 }
+}

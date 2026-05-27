@@ -1,0 +1,34 @@
+@import url('https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap');
+
+:root {
+  --surface: #111316;
+  --surface-container: #1e2023;
+  --surface-container-high: #282a2d;
+  --surface-container-lowest: #0c0e11;
+  --on-surface: #e2e2e6;
+  --on-surface-variant: #bac9cc;
+  --outline-variant: #3b494c;
+  --primary-container: #00e5ff;
+  --on-primary: #00363d;
+  --secondary: #ddb7ff;
+  --border-ghost: rgba(255, 255, 255, 0.08);
+  --radius: 4px;
+  --font-ui: 'Geist', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  margin: 0;
+  height: 100%;
+  background: var(--surface);
+  color: var(--on-surface);
+  font-family: var(--font-ui);
+  font-size: 14px;
+  overflow: hidden;
+}
