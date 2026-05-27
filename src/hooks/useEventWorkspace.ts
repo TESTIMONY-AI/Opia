@@ -12,6 +12,7 @@ import {
   createScene,
   deleteScene,
   renameScene,
+  reorderScenes,
   subscribeScenes,
   updateSceneMedia,
 } from '../systems/firebase/scenesRepository';
@@ -72,6 +73,9 @@ export function useEventWorkspace() {
   const [busy, setBusy] = useState(false);
   const [savingSceneId, setSavingSceneId] = useState<string | null>(null);
   const [optimisticScenes, setOptimisticScenes] = useState<StoredScene[]>([]);
+  const [pendingSceneOrder, setPendingSceneOrder] = useState<string[] | null>(
+    null,
+  );
   const [loadingSceneId, setLoadingSceneId] = useState<string | null>(null);
   const mediaUpdateTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pendingMediaUpdate = useRef<{
@@ -92,8 +96,19 @@ export function useEventWorkspace() {
     if (!configured) return storedScenes;
     const ids = new Set(storedScenes.map((s) => s.id));
     const pending = optimisticScenes.filter((s) => !ids.has(s.id));
-    return [...storedScenes, ...pending].sort((a, b) => a.order - b.order);
-  }, [configured, storedScenes, optimisticScenes]);
+    let merged = [...storedScenes, ...pending].sort(
+      (a, b) => a.order - b.order,
+    );
+    if (pendingSceneOrder?.length) {
+      const byId = new Map(merged.map((s) => [s.id, s]));
+      const ordered = pendingSceneOrder
+        .map((id) => byId.get(id))
+        .filter((s): s is StoredScene => s !== undefined);
+      const tail = merged.filter((s) => !pendingSceneOrder.includes(s.id));
+      merged = [...ordered, ...tail];
+    }
+    return merged;
+  }, [configured, storedScenes, optimisticScenes, pendingSceneOrder]);
 
   const scenes: SceneListItem[] = configured
     ? cloudScenes.map((s) => ({
@@ -155,6 +170,7 @@ export function useEventWorkspace() {
       queueMicrotask(() => {
         setStoredScenes([]);
         setOptimisticScenes([]);
+        setPendingSceneOrder(null);
         setActiveSceneId(null);
         cacheRef.current = new Map();
         setMediaCache(new Map());
@@ -164,6 +180,7 @@ export function useEventWorkspace() {
     /* eslint-disable react-hooks/set-state-in-effect */
     setActiveSceneId(null);
     setOptimisticScenes([]);
+    setPendingSceneOrder(null);
     cacheRef.current = new Map();
     setMediaCache(new Map());
     /* eslint-enable react-hooks/set-state-in-effect */
@@ -223,6 +240,15 @@ export function useEventWorkspace() {
     }
   }, [configured, storedScenes, optimisticScenes]);
 
+  useEffect(() => {
+    if (!pendingSceneOrder?.length) return;
+    const persistedIds = storedScenes.map((s) => s.id);
+    const want = pendingSceneOrder.filter((id) => persistedIds.includes(id));
+    if (persistedIds.join(',') === want.join(',')) {
+      setPendingSceneOrder(null);
+    }
+  }, [storedScenes, pendingSceneOrder]);
+
   const flushMediaUpdate = useCallback(async () => {
     if (!configured) return;
     const pending = pendingMediaUpdate.current;
@@ -270,6 +296,7 @@ export function useEventWorkspace() {
     setMediaCache(new Map());
     setStoredScenes([]);
     setOptimisticScenes([]);
+    setPendingSceneOrder(null);
     setSyncError(null);
   }, [flushPendingMediaSync]);
 
@@ -486,6 +513,43 @@ export function useEventWorkspace() {
     [activeEventId, activeSceneId, configured],
   );
 
+  const onReorderScenes = useCallback(
+    async (orderedIds: string[]) => {
+      if (!activeEventId || orderedIds.length === 0) return;
+      setSyncError(null);
+      try {
+        if (!configured) {
+          setLocalScenesByEvent((prev) => {
+            const list = prev.get(activeEventId) ?? [];
+            const byId = new Map(list.map((s) => [s.id, s]));
+            const reordered = orderedIds
+              .map((id) => byId.get(id))
+              .filter((s): s is LookScene => s !== undefined);
+            const next = new Map(prev);
+            next.set(activeEventId, reordered);
+            return next;
+          });
+          touchLocalEvent(activeEventId);
+          setEvents(loadLocalEvents());
+          return;
+        }
+        setPendingSceneOrder(orderedIds);
+        const persistedIds = orderedIds.filter((id) =>
+          storedScenes.some((s) => s.id === id),
+        );
+        if (persistedIds.length > 0) {
+          await reorderScenes(activeEventId, persistedIds);
+        }
+      } catch (e) {
+        setPendingSceneOrder(null);
+        const msg = e instanceof Error ? e.message : 'Failed to reorder scenes';
+        setSyncError(msg);
+        throw e;
+      }
+    },
+    [activeEventId, configured, storedScenes],
+  );
+
   const loadSceneMedia = useCallback(
     async (sceneId: string): Promise<SceneMediaMap> => {
       if (!configured) {
@@ -589,6 +653,7 @@ export function useEventWorkspace() {
       saveScene: onSaveScene,
       renameScene: onRenameScene,
       deleteScene: onDeleteScene,
+      reorderScenes: onReorderScenes,
       loadSceneMedia,
       onSceneMediaChanged,
       mediaStatus,
@@ -613,6 +678,7 @@ export function useEventWorkspace() {
       onSaveScene,
       onRenameScene,
       onDeleteScene,
+      onReorderScenes,
       loadSceneMedia,
       onSceneMediaChanged,
       mediaStatus,

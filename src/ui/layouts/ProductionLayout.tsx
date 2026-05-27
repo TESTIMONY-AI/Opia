@@ -188,6 +188,17 @@ export function ProductionLayout({
     [ws, bumpMedia],
   );
 
+  const onReorderScenes = useCallback(
+    (orderedIds: string[]) => {
+      setMediaError(null);
+      void ws.reorderScenes(orderedIds).catch((e) => {
+        setMediaError(formatFirebaseError(e));
+        console.error('[OPIA] reorder scenes', e);
+      });
+    },
+    [ws],
+  );
+
   const combinedError =
     [mediaError, ws.syncError]
       .filter((m): m is string => Boolean(m && String(m).trim()))
@@ -240,6 +251,7 @@ export function ProductionLayout({
             onApplyScene={(id) => void onApplyScene(id)}
             onRenameScene={(id, name) => void onRenameScene(id, name)}
             onDeleteScene={(id) => void onDeleteScene(id)}
+            onReorderScenes={onReorderScenes}
           />
         </div>
 

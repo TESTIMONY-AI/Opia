@@ -124,3 +124,19 @@ export async function deleteScene(
   await deleteDoc(doc(getDb(), 'events', eventId, 'scenes', sceneId));
   await touchEvent(eventId);
 }
+
+export async function reorderScenes(
+  eventId: string,
+  orderedSceneIds: string[],
+): Promise<void> {
+  const now = Date.now();
+  await Promise.all(
+    orderedSceneIds.map((sceneId, order) =>
+      updateDoc(doc(getDb(), 'events', eventId, 'scenes', sceneId), {
+        order,
+        updatedAt: now,
+      }),
+    ),
+  );
+  await touchEvent(eventId);
+}
