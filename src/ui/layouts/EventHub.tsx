@@ -35,16 +35,32 @@ export function EventHub({
   const [query, setQuery] = useState('');
   const [creating, setCreating] = useState(false);
   const [newName, setNewName] = useState('');
+  const [createError, setCreateError] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
 
   const filtered = events.filter((e) =>
     e.name.toLowerCase().includes(query.trim().toLowerCase()),
   );
 
   const submitCreate = async () => {
-    const name = newName.trim() || 'Untitled event';
-    await onCreateEvent(name);
-    setNewName('');
-    setCreating(false);
+    setCreateError(null);
+    setSaving(true);
+    try {
+      const name = newName.trim() || 'Untitled event';
+      await onCreateEvent(name);
+      setNewName('');
+      setCreating(false);
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : 'Could not create event';
+      setCreateError(msg);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const openCreateForm = () => {
+    setCreateError(null);
+    setCreating(true);
   };
 
   return (
@@ -55,9 +71,15 @@ export function EventHub({
           <p className="event-hub__tagline">Stage visualization</p>
         </header>
 
-        {syncError && (
+        {cloudSync && !eventsReady && (
+          <p className="event-hub__status" aria-live="polite">
+            Connecting to cloud…
+          </p>
+        )}
+
+        {(syncError || createError) && (
           <p className="event-hub__error" role="alert">
-            {syncError}
+            {createError ?? syncError}
           </p>
         )}
 
@@ -68,7 +90,8 @@ export function EventHub({
             <>
               {' '}
               <span className="event-hub__intro-note">
-                Events save on this device only until Firebase is connected.
+                Cloud not configured on this deploy — events save in this
+                browser only. Add VITE_FIREBASE_* on Render and redeploy.
               </span>
             </>
           )}
@@ -82,30 +105,29 @@ export function EventHub({
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             aria-label="Search events"
-            disabled={!eventsReady}
           />
         </div>
 
         <ul className="event-hub__list" aria-label="Events">
-          {!eventsReady && (
+          {cloudSync && !eventsReady && (
             <li className="event-hub__empty event-hub__empty--loading">
               Loading events…
             </li>
           )}
-          {eventsReady && filtered.length === 0 && (
+          {(eventsReady || !cloudSync) && filtered.length === 0 && (
             <li className="event-hub__empty">
               {events.length === 0
                 ? 'No events yet — create one below.'
                 : 'No events match your search.'}
             </li>
           )}
-          {eventsReady &&
+          {(eventsReady || !cloudSync) &&
             filtered.map((event) => (
               <li key={event.id}>
                 <button
                   type="button"
                   className="event-hub__row"
-                  disabled={busy}
+                  disabled={busy || saving}
                   onClick={() => onSelectEvent(event.id)}
                 >
                   <span className="event-hub__row-name">{event.name}</span>
@@ -125,23 +147,25 @@ export function EventHub({
                 placeholder="Event name"
                 value={newName}
                 autoFocus
+                disabled={saving}
                 onChange={(e) => setNewName(e.target.value)}
                 onKeyDown={(e) => {
-                  if (e.key === 'Enter') void submitCreate();
-                  if (e.key === 'Escape') setCreating(false);
+                  if (e.key === 'Enter' && !saving) void submitCreate();
+                  if (e.key === 'Escape' && !saving) setCreating(false);
                 }}
               />
               <button
                 type="button"
                 className="event-hub__btn event-hub__btn--primary"
-                disabled={busy}
+                disabled={saving}
                 onClick={() => void submitCreate()}
               >
-                Create
+                {saving ? 'Creating…' : 'Create'}
               </button>
               <button
                 type="button"
                 className="event-hub__btn"
+                disabled={saving}
                 onClick={() => setCreating(false)}
               >
                 Cancel
@@ -151,8 +175,8 @@ export function EventHub({
             <button
               type="button"
               className="event-hub__btn event-hub__btn--primary event-hub__btn--block"
-              disabled={busy || !eventsReady}
-              onClick={() => setCreating(true)}
+              disabled={busy}
+              onClick={openCreateForm}
             >
               + New event
             </button>

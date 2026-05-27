@@ -1,10 +1,15 @@
-import { useEffect, useRef, useState } from 'react';
+import { lazy, Suspense, useEffect, useRef, useState } from 'react';
 import { getEventIdFromUrl } from './navigation/eventUrl';
 import { useEventWorkspace } from './hooks/useEventWorkspace';
 import { EventHub } from './ui/layouts/EventHub';
-import { ProductionLayout } from './ui/layouts/ProductionLayout';
 import './ui/theme/tokens.css';
 import './App.css';
+
+const ProductionLayout = lazy(() =>
+  import('./ui/layouts/ProductionLayout').then((m) => ({
+    default: m.ProductionLayout,
+  })),
+);
 
 export default function App() {
   const workspace = useEventWorkspace();
@@ -38,21 +43,35 @@ export default function App() {
           setInStudio(true);
         }}
         onCreateEvent={async (name) => {
-          await workspace.createEvent(name);
-          setInStudio(true);
+          try {
+            await workspace.createEvent(name);
+            setInStudio(true);
+          } catch {
+            throw new Error(
+              workspace.syncError ?? 'Could not create event. Check Firebase.',
+            );
+          }
         }}
       />
     );
   }
 
   return (
-    <ProductionLayout
-      workspace={workspace}
-      onBackToEvents={() => {
-        workspace.exitEventWorkspace();
-        openedFromShareUrl.current = false;
-        setInStudio(false);
-      }}
-    />
+    <Suspense
+      fallback={
+        <div className="boot-overlay" role="status">
+          Loading stage…
+        </div>
+      }
+    >
+      <ProductionLayout
+        workspace={workspace}
+        onBackToEvents={() => {
+          workspace.exitEventWorkspace();
+          openedFromShareUrl.current = false;
+          setInStudio(false);
+        }}
+      />
+    </Suspense>
   );
 }

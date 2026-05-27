@@ -94,13 +94,36 @@ export function useEventWorkspace() {
 
   useEffect(() => {
     if (!configured) return;
-    return subscribeEvents(
-      (next) => {
-        setEvents(next);
+
+    let unsub: (() => void) | undefined;
+    const readyTimeout = window.setTimeout(() => {
+      setEventsReady(true);
+    }, 8000);
+
+    try {
+      unsub = subscribeEvents(
+        (next) => {
+          setEvents(next);
+          setEventsReady(true);
+          setSyncError(null);
+        },
+        (err) => {
+          setSyncError(err.message);
+          setEventsReady(true);
+        },
+      );
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : 'Firebase failed to start';
+      queueMicrotask(() => {
+        setSyncError(msg);
         setEventsReady(true);
-      },
-      (err) => setSyncError(err.message),
-    );
+      });
+    }
+
+    return () => {
+      window.clearTimeout(readyTimeout);
+      unsub?.();
+    };
   }, [configured]);
 
   useEffect(() => {
