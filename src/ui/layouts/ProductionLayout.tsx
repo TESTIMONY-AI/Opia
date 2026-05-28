@@ -326,7 +326,7 @@ export function ProductionLayout({
                 <ViewportMonitor
                   engine={engine}
                   id="program"
-                  label="PROGRAM"
+                  label="SNAP"
                   active={state.activeCamera === 'program'}
                   snapDisabled={!engine}
                   onSelect={() =>

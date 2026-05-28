@@ -51,7 +51,9 @@ export function StageViewport({
             onSnap={onSnap}
           />
         </div>
-        <span className="stage-viewport__cam">{activeCamera.toUpperCase()}</span>
+        <span className="stage-viewport__cam">
+          {activeCamera === 'program' ? 'SNAP' : activeCamera.toUpperCase()}
+        </span>
         <span className="stage-viewport__hint">drag to orbit · scroll to zoom</span>
       </div>
       <canvas ref={canvasRef} className="stage-viewport__canvas" />
