@@ -3,6 +3,7 @@ interface TopBarProps {
   cloudSync: boolean;
   syncError: string | null;
   onBackToEvents: () => void;
+  onToggleCollapse?: () => void;
 }
 
 export function TopBar({
@@ -10,6 +11,7 @@ export function TopBar({
   cloudSync,
   syncError,
   onBackToEvents,
+  onToggleCollapse,
 }: TopBarProps) {
   return (
     <header className="top-bar">
@@ -41,6 +43,17 @@ export function TopBar({
         <span className="top-bar__meta">
           {cloudSync ? 'Cloud sync' : 'Local · this device'}
         </span>
+        {onToggleCollapse && (
+          <button
+            type="button"
+            className="top-bar__collapse"
+            onClick={onToggleCollapse}
+            aria-label="Collapse top bar"
+            title="Collapse top bar"
+          >
+            ▲
+          </button>
+        )}
       </div>
     </header>
   );

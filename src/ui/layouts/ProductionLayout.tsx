@@ -18,7 +18,9 @@ import { OutlinerPanel, type MediaLoadStatus } from '../controls/OutlinerPanel';
 import type { MediaScreenId } from '../../systems/media/MediaManager';
 import { MEDIA_SCREENS } from '../../systems/scenes/lookScenes';
 import { InspectorPanel } from '../inspector/InspectorPanel';
+import { useWorkspacePanels } from '../../hooks/useWorkspacePanels';
 import { TopBar } from './TopBar';
+import { PanelRail } from './PanelRail';
 import { SceneStrip } from './SceneStrip';
 import { StageViewport } from './StageViewport';
 import type { EventWorkspace } from '../../hooks/useEventWorkspace';
@@ -65,6 +67,7 @@ export function ProductionLayout({
   const [state, setState] = useState<PrevisState>(buildInitialState);
   const [mediaError, setMediaError] = useState<string | null>(null);
   const [mediaTick, setMediaTick] = useState(0);
+  const { collapsed: panels, toggle: togglePanel } = useWorkspacePanels();
 
   const bumpMedia = useCallback(() => {
     setMediaTick((t) => t + 1);
@@ -216,49 +219,118 @@ export function ProductionLayout({
     );
   }
 
-  return (
-    <div className="opia-shell">
-      <TopBar
-        eventName={ws.activeEvent?.name ?? null}
-        cloudSync={ws.configured}
-        syncError={ws.syncError}
-        onBackToEvents={onBackToEvents}
-      />
-      <div className="opia-workspace">
-        <OutlinerPanel
-          state={state}
-          onChange={(partial) => setState((s) => ({ ...s, ...partial }))}
-          onMedia={onMedia}
-          mediaStatus={slotMediaStatus}
-          mediaError={combinedError}
-        />
+  const workspaceClass = [
+    'opia-workspace',
+    panels.outliner ? 'opia-workspace--outliner-collapsed' : '',
+    panels.inspector ? 'opia-workspace--inspector-collapsed' : '',
+  ]
+    .filter(Boolean)
+    .join(' ');
 
-        <div className="opia-center">
+  const centerClass = [
+    'opia-center',
+    panels.sceneStrip ? 'opia-center--scene-collapsed' : '',
+  ]
+    .filter(Boolean)
+    .join(' ');
+
+  return (
+    <div
+      className={`opia-shell${panels.topBar ? ' opia-shell--top-collapsed' : ''}`}
+    >
+      {panels.topBar ? (
+        <div className="top-bar-mini">
+          <button
+            type="button"
+            className="top-bar-mini__expand"
+            onClick={() => togglePanel('topBar')}
+            aria-label="Show top bar"
+            title="Show top bar"
+          >
+            ▼ Top bar
+          </button>
+          {ws.activeEvent?.name && (
+            <span className="top-bar-mini__event">{ws.activeEvent.name}</span>
+          )}
+        </div>
+      ) : (
+        <TopBar
+          eventName={ws.activeEvent?.name ?? null}
+          cloudSync={ws.configured}
+          syncError={ws.syncError}
+          onBackToEvents={onBackToEvents}
+          onToggleCollapse={() => togglePanel('topBar')}
+        />
+      )}
+      <div className={workspaceClass}>
+        <PanelRail
+          side="left"
+          title="Outliner"
+          collapsed={panels.outliner}
+          onToggle={() => togglePanel('outliner')}
+        >
+          <OutlinerPanel
+            state={state}
+            onChange={(partial) => setState((s) => ({ ...s, ...partial }))}
+            onMedia={onMedia}
+            mediaStatus={slotMediaStatus}
+            mediaError={combinedError}
+          />
+        </PanelRail>
+
+        <div className={centerClass}>
           <StageViewport
             canvasRef={canvasRef}
             engine={engine}
             activeCamera={state.activeCamera}
           />
-          <SceneStrip
-            engineReady={engine !== null}
-            saveDisabled={!ws.activeEventId || Boolean(ws.savingSceneId)}
-            saveBusy={Boolean(ws.savingSceneId)}
-            stripError={mediaError}
-            scenes={ws.scenes}
-            activeSceneId={ws.activeSceneId}
-            loadingSceneId={ws.loadingSceneId}
-            onSaveScene={() => void onSaveScene()}
-            onApplyScene={(id) => void onApplyScene(id)}
-            onRenameScene={(id, name) => void onRenameScene(id, name)}
-            onDeleteScene={(id) => void onDeleteScene(id)}
-            onReorderScenes={onReorderScenes}
-          />
+          <div
+            className={`scene-strip-shell${panels.sceneStrip ? ' scene-strip-shell--collapsed' : ''}`}
+          >
+            <button
+              type="button"
+              className="scene-strip-shell__toggle"
+              onClick={() => togglePanel('sceneStrip')}
+              aria-expanded={!panels.sceneStrip}
+              aria-label={
+                panels.sceneStrip ? 'Show scene strip' : 'Hide scene strip'
+              }
+              title={
+                panels.sceneStrip ? 'Show scene strip' : 'Hide scene strip'
+              }
+            >
+              {panels.sceneStrip ? '▲ Scenes' : '▼'}
+            </button>
+            {!panels.sceneStrip && (
+              <SceneStrip
+                engineReady={engine !== null}
+                saveDisabled={!ws.activeEventId || Boolean(ws.savingSceneId)}
+                saveBusy={Boolean(ws.savingSceneId)}
+                stripError={mediaError}
+                scenes={ws.scenes}
+                activeSceneId={ws.activeSceneId}
+                loadingSceneId={ws.loadingSceneId}
+                onSaveScene={() => void onSaveScene()}
+                onApplyScene={(id) => void onApplyScene(id)}
+                onRenameScene={(id, name) => void onRenameScene(id, name)}
+                onDeleteScene={(id) => void onDeleteScene(id)}
+                onReorderScenes={onReorderScenes}
+              />
+            )}
+          </div>
         </div>
 
-        <InspectorPanel
-          state={state}
-          onChange={(partial) => setState((s) => ({ ...s, ...partial }))}
-        />
+        <PanelRail
+          side="right"
+          title="Properties"
+          collapsed={panels.inspector}
+          onToggle={() => togglePanel('inspector')}
+        >
+          <InspectorPanel
+            state={state}
+            onChange={(partial) => setState((s) => ({ ...s, ...partial }))}
+          />
+        </PanelRail>
       </div>
       {!engine && <div className="boot-overlay">Loading 3D engine…</div>}
     </div>

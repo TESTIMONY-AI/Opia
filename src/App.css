@@ -278,6 +278,7 @@
   display: flex;
   align-items: center;
   gap: 12px;
+  flex-shrink: 0;
 }
 
 .top-bar__meta {
@@ -305,10 +306,203 @@
 .opia-workspace {
   flex: 1;
   display: grid;
-  grid-template-columns: 220px 1fr 260px;
+  grid-template-columns: var(--panel-outliner-w, 220px) 1fr var(--panel-inspector-w, 260px);
   min-height: 0;
   gap: 1px;
   background: var(--border-ghost);
+}
+
+.opia-workspace--outliner-collapsed {
+  --panel-outliner-w: 36px;
+}
+
+.opia-workspace--inspector-collapsed {
+  --panel-inspector-w: 36px;
+}
+
+.panel-rail {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  min-width: 0;
+  background: var(--surface-container-low);
+}
+
+.panel-rail__body {
+  flex: 1;
+  min-height: 0;
+  min-width: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.panel-rail__body .outliner,
+.panel-rail__body .inspector {
+  flex: 1;
+  min-height: 0;
+  padding-top: 28px;
+}
+
+.panel-rail__toggle {
+  position: absolute;
+  top: 8px;
+  z-index: 3;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  font-size: 14px;
+  line-height: 1;
+  color: var(--on-surface-variant);
+  background: var(--surface-container-high);
+  border: 1px solid var(--border-ghost);
+  border-radius: var(--radius);
+  cursor: pointer;
+}
+
+.panel-rail__toggle:hover {
+  color: var(--on-surface);
+  border-color: var(--primary-container);
+}
+
+.panel-rail__toggle--left {
+  right: 6px;
+}
+
+.panel-rail__toggle--right {
+  left: 6px;
+}
+
+.panel-rail--collapsed .panel-rail__toggle--left {
+  right: auto;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.panel-rail--collapsed .panel-rail__toggle--right {
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.panel-rail__label {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 36px 4px 8px;
+  font-family: var(--font-mono);
+  font-size: 9px;
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--on-surface-variant);
+  writing-mode: vertical-rl;
+  text-orientation: mixed;
+  transform: rotate(180deg);
+  user-select: none;
+}
+
+.panel-rail--collapsed {
+  background: var(--surface-container);
+}
+
+.top-bar__collapse {
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  margin-left: 8px;
+  padding: 0;
+  font-size: 10px;
+  line-height: 1;
+  color: var(--on-surface-variant);
+  background: transparent;
+  border: 1px solid var(--border-ghost);
+  border-radius: var(--radius);
+  cursor: pointer;
+}
+
+.top-bar__collapse:hover {
+  color: var(--on-surface);
+  border-color: var(--primary-container);
+}
+
+.top-bar-mini {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  height: 28px;
+  min-height: 28px;
+  padding: 0 12px;
+  background: var(--surface-container);
+  border-bottom: 1px solid var(--border-ghost);
+}
+
+.top-bar-mini__expand {
+  padding: 2px 8px;
+  font-family: var(--font-ui);
+  font-size: 11px;
+  color: var(--on-surface-variant);
+  background: var(--surface-container-high);
+  border: 1px solid var(--border-ghost);
+  border-radius: var(--radius);
+  cursor: pointer;
+}
+
+.top-bar-mini__expand:hover {
+  color: var(--on-surface);
+}
+
+.top-bar-mini__event {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--on-surface);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.opia-shell--top-collapsed .top-bar-mini {
+  /* default */
+}
+
+.scene-strip-shell {
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  min-height: 0;
+  background: var(--surface-container-lowest);
+  border-top: 1px solid var(--border-ghost);
+}
+
+.scene-strip-shell__toggle {
+  flex-shrink: 0;
+  align-self: flex-start;
+  margin: 4px 8px 0;
+  padding: 2px 8px;
+  font-family: var(--font-ui);
+  font-size: 11px;
+  color: var(--on-surface-variant);
+  background: var(--surface-container-high);
+  border: 1px solid var(--border-ghost);
+  border-radius: var(--radius);
+  cursor: pointer;
+}
+
+.scene-strip-shell__toggle:hover {
+  color: var(--on-surface);
+}
+
+.scene-strip-shell--collapsed {
+  min-height: 32px;
+}
+
+.scene-strip-shell--collapsed .scene-strip-shell__toggle {
+  margin: 4px 8px;
+}
+
+.opia-center--scene-collapsed .scene-strip-shell {
+  flex: 0 0 auto;
 }
 
 .panel-title {
@@ -621,7 +815,7 @@
   min-height: 120px;
   padding: 8px 10px;
   background: var(--surface-container-lowest);
-  border-top: 1px solid var(--border-ghost);
+  border-top: none;
 }
 
 .scene-strip__hint {
