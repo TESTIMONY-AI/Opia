@@ -23,13 +23,9 @@ import { TopBar } from './TopBar';
 import { PanelRail } from './PanelRail';
 import { SceneStrip } from './SceneStrip';
 import { StageViewport } from './StageViewport';
-import { ViewportMonitor } from './ViewportMonitor';
 import type { EventWorkspace } from '../../hooks/useEventWorkspace';
 import { formatFirebaseError } from '../../systems/firebase/formatFirebaseError';
-import {
-  buildScreenshotName,
-  downloadPng,
-} from '../../utils/downloadImage';
+import { buildScreenshotName, downloadPng } from '../../utils/downloadImage';
 
 function mediaStatusFromEngine(engine: PrevisEngine): MediaLoadStatus {
   const out: MediaLoadStatus = {};
@@ -71,7 +67,6 @@ export function ProductionLayout({
   const [error, setError] = useState<string | null>(null);
   const [state, setState] = useState<PrevisState>(buildInitialState);
   const [mediaError, setMediaError] = useState<string | null>(null);
-  const [snapMessage, setSnapMessage] = useState<string | null>(null);
   const [mediaTick, setMediaTick] = useState(0);
   const { collapsed: panels, toggle: togglePanel } = useWorkspacePanels();
 
@@ -208,33 +203,23 @@ export function ProductionLayout({
     [ws],
   );
 
-  const screenshotContext = useMemo(() => {
-    const event = ws.activeEvent?.name;
-    const scene = ws.scenes.find((s) => s.id === ws.activeSceneId)?.name;
-    return { event, scene };
+  const onSnapFromProgramLabel = useCallback(() => {
+    const eng = engineRef.current;
+    if (!eng) return;
+    setMediaError(null);
+    try {
+      const dataUrl = eng.captureMainViewPng();
+      const fileName = buildScreenshotName('program', {
+        event: ws.activeEvent?.name,
+        scene: ws.scenes.find((s) => s.id === ws.activeSceneId)?.name,
+      });
+      downloadPng(dataUrl, fileName);
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : 'Screenshot failed';
+      setMediaError(msg);
+      console.error('[OPIA] screenshot', e);
+    }
   }, [ws.activeEvent?.name, ws.activeSceneId, ws.scenes]);
-
-  const takeScreenshot = useCallback(
-    (view: '3d' | 'program') => {
-      const eng = engineRef.current;
-      if (!eng) return;
-      setSnapMessage(null);
-      try {
-        const dataUrl =
-          view === '3d'
-            ? eng.captureMainViewPng()
-            : eng.captureCameraPng('program');
-        const fileName = buildScreenshotName(view, screenshotContext);
-        downloadPng(dataUrl, fileName);
-        setSnapMessage(`Saved ${fileName}`);
-      } catch (e) {
-        const msg = e instanceof Error ? e.message : 'Screenshot failed';
-        setMediaError(msg);
-        console.error('[OPIA] screenshot', e);
-      }
-    },
-    [screenshotContext],
-  );
 
   const combinedError =
     [mediaError, ws.syncError]
@@ -318,30 +303,9 @@ export function ProductionLayout({
               canvasRef={canvasRef}
               engine={engine}
               activeCamera={state.activeCamera}
-              snapDisabled={!engine}
-              onSnap={() => takeScreenshot('3d')}
+              onSnapFromLabel={onSnapFromProgramLabel}
             />
-            {engine && (
-              <div className="monitor-strip monitor-strip--program">
-                <ViewportMonitor
-                  engine={engine}
-                  id="program"
-                  label="SNAP"
-                  active={state.activeCamera === 'program'}
-                  snapDisabled={!engine}
-                  onSelect={() =>
-                    setState((s) => ({ ...s, activeCamera: 'program' }))
-                  }
-                  onSnap={() => takeScreenshot('program')}
-                />
-              </div>
-            )}
           </div>
-          {snapMessage && (
-            <p className="viewport-stack__snap-toast" role="status">
-              {snapMessage}
-            </p>
-          )}
           <div
             className={`scene-strip-shell${panels.sceneStrip ? ' scene-strip-shell--collapsed' : ''}`}
           >

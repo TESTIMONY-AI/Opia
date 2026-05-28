@@ -710,16 +710,6 @@
   min-width: 0;
 }
 
-.viewport-stack__snap-toast {
-  margin: 0;
-  padding: 4px 12px;
-  font-family: var(--font-mono);
-  font-size: 10px;
-  color: var(--primary-container);
-  background: var(--surface-container-low);
-  border-top: 1px solid var(--border-ghost);
-}
-
 .stage-viewport__hud {
   position: absolute;
   inset: 0;
@@ -729,19 +719,6 @@
   flex-direction: column;
   justify-content: space-between;
   padding: 10px 12px;
-}
-
-.stage-viewport__hud-top {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 8px;
-  width: 100%;
-  pointer-events: none;
-}
-
-.stage-viewport__hud-top .view-snap-btn {
-  pointer-events: auto;
 }
 
 .stage-viewport__badge {
@@ -772,36 +749,17 @@
   border: 1px solid var(--border-ghost);
 }
 
+.stage-viewport__cam--action {
+  cursor: pointer;
+  pointer-events: auto;
+}
+
 .stage-viewport__hint {
   align-self: center;
   font-family: var(--font-mono);
   font-size: 10px;
   color: var(--on-surface-variant);
   opacity: 0.7;
-}
-
-.view-snap-btn {
-  flex-shrink: 0;
-  padding: 4px 10px;
-  font-family: var(--font-mono);
-  font-size: 10px;
-  font-weight: 600;
-  letter-spacing: 0.08em;
-  color: var(--on-primary);
-  background: var(--primary-container);
-  border: 1px solid var(--primary-container);
-  border-radius: var(--radius);
-  cursor: pointer;
-  z-index: 3;
-}
-
-.view-snap-btn:hover:not(:disabled) {
-  filter: brightness(1.08);
-}
-
-.view-snap-btn:disabled {
-  opacity: 0.45;
-  cursor: not-allowed;
 }
 
 .monitor-strip {
@@ -813,13 +771,6 @@
   padding: 4px;
   background: var(--surface-container-lowest);
   border-top: 1px solid var(--border-ghost);
-}
-
-.monitor-strip--program {
-  grid-template-columns: 1fr;
-  height: 100px;
-  min-height: 100px;
-  flex-shrink: 0;
 }
 
 .monitor {
@@ -837,13 +788,6 @@
 
 .monitor--selectable {
   cursor: pointer;
-}
-
-.monitor .view-snap-btn {
-  position: absolute;
-  top: 6px;
-  right: 6px;
-  pointer-events: auto;
 }
 
 .monitor--on-air {
@@ -1443,4 +1387,173 @@
 
 .event-hub__btn--block {
   width: 100%;
+}
+
+@media (max-width: 1024px) {
+  .opia-shell {
+    height: 100dvh;
+    width: 100%;
+  }
+
+  .top-bar {
+    height: auto;
+    min-height: 44px;
+    padding: 6px 10px;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  .top-bar__brand {
+    gap: 8px;
+  }
+
+  .top-bar__brand-text {
+    gap: 6px;
+  }
+
+  .top-bar__sub {
+    display: none;
+  }
+
+  .top-bar__center {
+    order: 3;
+    flex: 1 1 100%;
+    justify-content: flex-start;
+  }
+
+  .top-bar__event-name {
+    max-width: calc(100vw - 28px);
+  }
+
+  .top-bar__sync-error {
+    max-width: calc(100vw - 28px);
+  }
+
+  .top-bar__status {
+    margin-left: auto;
+    gap: 8px;
+  }
+
+  .status-pill {
+    padding: 2px 6px;
+  }
+
+  .opia-workspace {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    overflow-y: auto;
+    overflow-x: hidden;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .opia-center {
+    order: 1;
+    min-height: 50dvh;
+  }
+
+  .panel-rail--left {
+    order: 2;
+  }
+
+  .panel-rail--right {
+    order: 3;
+  }
+
+  .panel-rail {
+    min-height: 0;
+  }
+
+  .panel-rail__toggle {
+    width: 28px;
+    height: 28px;
+  }
+
+  .panel-rail__body .outliner,
+  .panel-rail__body .inspector {
+    padding-top: 40px;
+  }
+
+  .panel-rail__label {
+    writing-mode: horizontal-tb;
+    text-orientation: mixed;
+    transform: none;
+    justify-content: flex-start;
+    padding: 8px 12px 8px 40px;
+  }
+
+  .panel-rail--collapsed .panel-rail__toggle--left,
+  .panel-rail--collapsed .panel-rail__toggle--right {
+    left: 8px;
+    transform: none;
+  }
+
+  .stage-viewport {
+    min-height: 38dvh;
+  }
+
+  .stage-viewport__hint {
+    font-size: 9px;
+    opacity: 0.6;
+  }
+
+  .scene-strip-shell {
+    min-height: 0;
+  }
+
+  .scene-strip {
+    height: auto;
+    min-height: 88px;
+    padding: 6px 8px;
+    gap: 6px;
+  }
+
+  .scene-strip__save {
+    min-height: 34px;
+  }
+
+  .scene-strip__scroll {
+    padding-bottom: 2px;
+  }
+
+  .scene-chip__main {
+    max-width: 132px;
+  }
+}
+
+@media (max-width: 640px) {
+  .top-bar__meta {
+    display: none;
+  }
+
+  .top-bar__logo {
+    font-size: 14px;
+  }
+
+  .top-bar-mini {
+    height: auto;
+    min-height: 32px;
+    padding: 4px 8px;
+  }
+
+  .stage-viewport {
+    min-height: 34dvh;
+  }
+
+  .scene-strip {
+    min-height: 78px;
+  }
+
+  .scene-chip__rename,
+  .scene-chip__delete {
+    width: 30px;
+  }
+
+  .event-hub {
+    padding: 14px 10px;
+  }
+
+  .event-hub__panel {
+    padding: 18px 14px 14px;
+  }
 }
