@@ -702,6 +702,24 @@
   display: block;
 }
 
+.viewport-stack {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  min-width: 0;
+}
+
+.viewport-stack__snap-toast {
+  margin: 0;
+  padding: 4px 12px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--primary-container);
+  background: var(--surface-container-low);
+  border-top: 1px solid var(--border-ghost);
+}
+
 .stage-viewport__hud {
   position: absolute;
   inset: 0;
@@ -711,6 +729,19 @@
   flex-direction: column;
   justify-content: space-between;
   padding: 10px 12px;
+}
+
+.stage-viewport__hud-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+  pointer-events: none;
+}
+
+.stage-viewport__hud-top .view-snap-btn {
+  pointer-events: auto;
 }
 
 .stage-viewport__badge {
@@ -749,6 +780,30 @@
   opacity: 0.7;
 }
 
+.view-snap-btn {
+  flex-shrink: 0;
+  padding: 4px 10px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  color: var(--on-primary);
+  background: var(--primary-container);
+  border: 1px solid var(--primary-container);
+  border-radius: var(--radius);
+  cursor: pointer;
+  z-index: 3;
+}
+
+.view-snap-btn:hover:not(:disabled) {
+  filter: brightness(1.08);
+}
+
+.view-snap-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
 .monitor-strip {
   display: grid;
   grid-template-columns: repeat(5, 1fr);
@@ -758,6 +813,13 @@
   padding: 4px;
   background: var(--surface-container-lowest);
   border-top: 1px solid var(--border-ghost);
+}
+
+.monitor-strip--program {
+  grid-template-columns: 1fr;
+  height: 100px;
+  min-height: 100px;
+  flex-shrink: 0;
 }
 
 .monitor {
@@ -770,8 +832,18 @@
   border-radius: var(--radius);
   background: #000;
   padding: 0;
-  cursor: pointer;
   overflow: hidden;
+}
+
+.monitor--selectable {
+  cursor: pointer;
+}
+
+.monitor .view-snap-btn {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  pointer-events: auto;
 }
 
 .monitor--on-air {

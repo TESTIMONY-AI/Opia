@@ -1,17 +1,22 @@
 import { useEffect, type RefObject } from 'react';
 import type { PrevisEngine } from '../../core/renderer/PrevisEngine';
 import type { CameraId } from '../../types';
+import { ViewSnapButton } from './ViewSnapButton';
 
 interface StageViewportProps {
   canvasRef: RefObject<HTMLCanvasElement | null>;
   engine: PrevisEngine | null;
   activeCamera: CameraId;
+  snapDisabled?: boolean;
+  onSnap: () => void;
 }
 
 export function StageViewport({
   canvasRef,
   engine,
   activeCamera,
+  snapDisabled = false,
+  onSnap,
 }: StageViewportProps) {
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -37,7 +42,15 @@ export function StageViewport({
   return (
     <div className="stage-viewport">
       <div className="stage-viewport__hud">
-        <span className="stage-viewport__badge">3D STAGE</span>
+        <div className="stage-viewport__hud-top">
+          <span className="stage-viewport__badge">3D STAGE</span>
+          <ViewSnapButton
+            label="SNAP"
+            title="Save 3D view screenshot"
+            disabled={!engine || snapDisabled}
+            onSnap={onSnap}
+          />
+        </div>
         <span className="stage-viewport__cam">{activeCamera.toUpperCase()}</span>
         <span className="stage-viewport__hint">drag to orbit · scroll to zoom</span>
       </div>

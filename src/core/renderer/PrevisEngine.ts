@@ -59,6 +59,7 @@ export class PrevisEngine {
       canvas: mainCanvas,
       antialias: true,
       alpha: false,
+      preserveDrawingBuffer: true,
       powerPreference: 'high-performance',
     });
     this.renderer.debug.checkShaderErrors = true;
@@ -172,6 +173,48 @@ export class PrevisEngine {
 
   getTargetTexture(id: CameraId): THREE.Texture | null {
     return this.targets.get(id)?.texture ?? null;
+  }
+
+  captureMainViewPng(): string {
+    const active = this.state.cameras[this.state.activeCamera];
+    this.renderer.setRenderTarget(null);
+    this.renderer.toneMappingExposure = active.exposure * (800 / active.iso);
+    this.renderer.render(this.stage.scene, this.viewportCamera);
+    return this.mainCanvas.toDataURL('image/png');
+  }
+
+  captureCameraPng(id: CameraId): string {
+    const vc = this.cameras.find((c) => c.id === id);
+    const target = this.targets.get(id);
+    if (!vc || !target) {
+      throw new Error(`Camera "${id}" is not ready`);
+    }
+    applyCameraPost(this.renderer, this.stage.scene, vc, target);
+    const w = target.width;
+    const h = target.height;
+    const buffer = new Uint8Array(w * h * 4);
+    this.renderer.readRenderTargetPixels(target, 0, 0, w, h, buffer);
+
+    const canvas = document.createElement('canvas');
+    canvas.width = w;
+    canvas.height = h;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) throw new Error('Could not create screenshot canvas');
+
+    const imageData = ctx.createImageData(w, h);
+    for (let y = 0; y < h; y++) {
+      for (let x = 0; x < w; x++) {
+        const srcY = h - 1 - y;
+        const srcI = (srcY * w + x) * 4;
+        const dstI = (y * w + x) * 4;
+        imageData.data[dstI] = buffer[srcI]!;
+        imageData.data[dstI + 1] = buffer[srcI + 1]!;
+        imageData.data[dstI + 2] = buffer[srcI + 2]!;
+        imageData.data[dstI + 3] = buffer[srcI + 3]!;
+      }
+    }
+    ctx.putImageData(imageData, 0, 0);
+    return canvas.toDataURL('image/png');
   }
 
   paintMonitor(id: CameraId, displayCanvas: HTMLCanvasElement): void {
