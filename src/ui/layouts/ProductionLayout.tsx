@@ -16,7 +16,7 @@ import {
 } from '../../types';
 import { OutlinerPanel, type MediaLoadStatus } from '../controls/OutlinerPanel';
 import type { MediaScreenId } from '../../systems/media/MediaManager';
-import { MEDIA_SCREENS } from '../../systems/scenes/lookScenes';
+import { emptySceneMedia, MEDIA_SCREENS } from '../../systems/scenes/lookScenes';
 import { InspectorPanel } from '../inspector/InspectorPanel';
 import { useWorkspacePanels } from '../../hooks/useWorkspacePanels';
 import { TopBar } from './TopBar';
@@ -130,22 +130,13 @@ export function ProductionLayout({
   );
 
   const onSaveScene = useCallback(async () => {
-    const media = engineRef.current?.captureSceneMedia();
-    if (!media) return;
     if (!ws.activeEventId) {
       setMediaError('No active event.');
       return;
     }
-    const hasUploads = MEDIA_SCREENS.some((id) => media[id] !== null);
-    if (ws.configured && !hasUploads) {
-      setMediaError(
-        'Upload at least one image or video (Main, Sides, or TVs) before saving a scene.',
-      );
-      return;
-    }
     setMediaError(null);
     try {
-      await ws.saveScene(media);
+      await ws.saveScene(emptySceneMedia());
       bumpMedia();
     } catch (e) {
       setMediaError(formatFirebaseError(e));

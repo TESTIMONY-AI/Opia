@@ -29,6 +29,21 @@ function isVideoContentType(contentType: string): boolean {
   return contentType.startsWith('video/');
 }
 
+function guessContentType(fileName: string): string {
+  const lower = fileName.toLowerCase();
+  if (/\.(mp4|mov|m4v)$/.test(lower)) return 'video/mp4';
+  if (/\.webm$/.test(lower)) return 'video/webm';
+  if (/\.ogg$/.test(lower)) return 'video/ogg';
+  if (/\.png$/.test(lower)) return 'image/png';
+  if (/\.jpe?g$/.test(lower)) return 'image/jpeg';
+  if (/\.webp$/.test(lower)) return 'image/webp';
+  return '';
+}
+
+function isVideoFile(fileName: string): boolean {
+  return isVideoContentType(guessContentType(fileName));
+}
+
 async function uploadScreen(
   eventId: string,
   sceneId: string,
@@ -66,11 +81,17 @@ export async function uploadSceneMedia(
   const entries = await Promise.all(
     MEDIA_SCREENS.map(async (screen) => {
       const asset = media[screen];
-      if (!asset?.blob) {
-        return [screen, null] as const;
+      if (!asset) return [screen, null] as const;
+      if (asset.blob) {
+        const stored = await uploadScreen(eventId, sceneId, screen, asset);
+        return [screen, stored] as const;
       }
-      const stored = await uploadScreen(eventId, sceneId, screen, asset);
-      return [screen, stored] as const;
+      // Asset already in Firebase Storage — reuse the existing reference.
+      if (asset.storagePath) {
+        const contentType = guessContentType(asset.fileName) || 'application/octet-stream';
+        return [screen, { storagePath: asset.storagePath, fileName: asset.fileName, contentType }] as const;
+      }
+      return [screen, null] as const;
     }),
   );
   const stored = {} as StoredMediaMap;
@@ -118,12 +139,13 @@ async function downloadScreen(
   try {
     if (isVideoContentType(contentType)) {
       const sourceUrl = await getDownloadURL(storageRef);
-      return { fileName: refData.fileName, sourceUrl };
+      return { fileName: refData.fileName, sourceUrl, storagePath: refData.storagePath };
     }
     const bytes = await getBytes(storageRef);
     return {
       fileName: refData.fileName,
       blob: new Blob([bytes], { type: contentType }),
+      storagePath: refData.storagePath,
     };
   } catch (e) {
     const detail = e instanceof Error ? e.message : String(e);

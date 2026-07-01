@@ -6,6 +6,8 @@ export interface SceneMediaAsset {
   blob?: Blob;
   /** Firebase download URL — videos load progressively without a full download. */
   sourceUrl?: string;
+  /** Firebase Storage path — present when the asset already lives in Storage, so it can be reused without re-uploading. */
+  storagePath?: string;
 }
 
 export type SceneMediaMap = Record<MediaScreenId, SceneMediaAsset | null>;

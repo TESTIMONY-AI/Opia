@@ -115,7 +115,7 @@ export function SceneStrip({
         onClick={onSaveScene}
         title="Save current media on all screens as a new scene"
       >
-        {saveBusy ? 'Saving…' : '+ Save scene'}
+        {saveBusy ? 'Creating…' : '+ New scene'}
       </button>
       <div className="scene-strip__scroll">
         {orderedScenes.length === 0 && (

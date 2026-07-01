@@ -42,6 +42,8 @@ export class MediaSlot {
   private videoEl: HTMLVideoElement | null = null;
   private objectUrl: string | null = null;
   private lastFile: File | null = null;
+  private lastSourceUrl: string | null = null;
+  private lastStoragePath: string | null = null;
   kind: MediaKind = 'placeholder';
   fileName = '';
   private readonly placeholderLabel: string;
@@ -67,6 +69,8 @@ export class MediaSlot {
     this.objectUrl = url;
     this.fileName = file.name;
     this.lastFile = file;
+    this.lastSourceUrl = null;
+    this.lastStoragePath = null;
 
     try {
       if (isVideoFile(file)) {
@@ -107,6 +111,8 @@ export class MediaSlot {
     }
 
     this.lastFile = null;
+    this.lastSourceUrl = asset.sourceUrl ?? null;
+    this.lastStoragePath = asset.storagePath ?? null;
     const url = asset.sourceUrl;
     const video = isVideoFile(
       new File([], asset.fileName, {
@@ -135,14 +141,25 @@ export class MediaSlot {
     }
   }
 
-  getAsset(): { fileName: string; blob: Blob } | null {
-    if (!this.lastFile) return null;
-    return { fileName: this.fileName, blob: this.lastFile };
+  getAsset(): { fileName: string; blob?: Blob; sourceUrl?: string; storagePath?: string } | null {
+    if (this.lastFile) {
+      return { fileName: this.fileName, blob: this.lastFile };
+    }
+    if (this.lastSourceUrl) {
+      return {
+        fileName: this.fileName,
+        sourceUrl: this.lastSourceUrl,
+        ...(this.lastStoragePath ? { storagePath: this.lastStoragePath } : {}),
+      };
+    }
+    return null;
   }
 
   resetToPlaceholder(): void {
     this.disposeCurrent();
     this.lastFile = null;
+    this.lastSourceUrl = null;
+    this.lastStoragePath = null;
     this.fileName = '';
     this.kind = 'placeholder';
     const prev = this._texture;
